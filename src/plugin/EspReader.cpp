@@ -235,18 +235,17 @@ void parseContainer(
 
         /*
          * GRUP is a container rather than a normal TES record.
-         * Its size field covers everything after the initial
-         * 8-byte signature/size pair, so the group's end is
-         * offset + 8 + size. Child records begin at +24.
+         * Its size field is the total size of the GRUP, including
+         * its 24-byte header. Child records therefore begin at +24.
          */
         if (type == "GRUP")
         {
             const std::size_t groupEnd =
-                offset + 8 + static_cast<std::size_t>(size);
+                offset + static_cast<std::size_t>(size);
 
             requireRange(
                 offset,
-                8 + static_cast<std::size_t>(size),
+                static_cast<std::size_t>(size),
                 end,
                 "GRUP");
 
