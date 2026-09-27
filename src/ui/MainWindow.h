@@ -20,6 +20,7 @@ private:
     void drawMenuBar();
     void drawPluginPanel();
     void drawRecordPanel();
+    void drawTerrainPanel();
     void drawWorldIndexPanel();
     void openPlugin();
 
