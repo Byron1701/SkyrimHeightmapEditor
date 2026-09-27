@@ -228,8 +228,8 @@ void TerrainViewport::draw(
             distance =
                 std::clamp(
                     distance,
-                    800.0f,
-                    12000.0f);
+                    1000.0f,
+                    100000.0f);
         }
     }
 
@@ -263,7 +263,7 @@ void TerrainViewport::draw(
         };
 
     const float scale =
-        1150.0f;
+        650.0f;
 
     std::vector<Triangle> triangles;
     triangles.reserve(
