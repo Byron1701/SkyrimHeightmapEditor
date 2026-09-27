@@ -20,6 +20,7 @@ private:
     void drawMenuBar();
     void drawPluginPanel();
     void drawRecordPanel();
+    void drawWorldIndexPanel();
     void openPlugin();
 
     Plugin& plugin_;
@@ -30,5 +31,7 @@ private:
         "No plugin loaded.";
 
     int selectedRecord_ = -1;
+    int selectedWorldspace_ = -1;
+    int selectedCell_ = -1;
     bool exitRequested_ = false;
 };
