@@ -364,6 +364,7 @@ void parseContainer(
             static_cast<std::size_t>(size);
     }
 }
+}
 
 Plugin EspReader::read(
     const std::filesystem::path& path)
