@@ -607,6 +607,10 @@ void MainWindow::drawTerrainPanel()
                 "Wireframe",
                 &terrainWireframe_);
 
+            ImGui::SameLine();
+            if (ImGui::Button("Re-centre View"))
+                terrainViewport_.resetView();
+
             ImGui::BeginChild(
                 "TerrainWorldspaceViewportChild",
                 ImVec2(0.0f, 500.0f),
