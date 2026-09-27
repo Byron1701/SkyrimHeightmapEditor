@@ -328,7 +328,7 @@ void TerrainViewport::draw(
                 distance,
                 centre,
                 scale,
-                pan);
+                ImVec2(panX, panY));
 
         const Vec3 normal =
             normalise(
