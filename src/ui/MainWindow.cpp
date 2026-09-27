@@ -1,6 +1,7 @@
 #include "ui/MainWindow.h"
 
 #include "plugin/EspReader.h"
+#include "skyrim/LandDecoder.h"
 
 #include <imgui.h>
 
@@ -84,6 +85,10 @@ void MainWindow::draw()
         ImGui::Separator();
 
         drawWorldIndexPanel();
+
+        ImGui::Separator();
+
+        drawTerrainPanel();
 
         ImGui::Separator();
 
@@ -500,6 +505,114 @@ void MainWindow::drawWorldIndexPanel()
         }
 
         ImGui::EndTabBar();
+    }
+}
+
+void MainWindow::drawTerrainPanel()
+{
+    ImGui::TextUnformatted("Selected LAND heightfield");
+
+    if (selectedCell_ < 0 ||
+        selectedCell_ >= static_cast<int>(plugin_.cells.size()))
+    {
+        ImGui::TextUnformatted("Select a cell with an indexed LAND record.");
+        return;
+    }
+
+    const CellIndex& cell =
+        plugin_.cells[static_cast<std::size_t>(selectedCell_)];
+
+    if (cell.landRecordIndex == static_cast<std::size_t>(-1))
+    {
+        ImGui::TextUnformatted("The selected cell has no indexed LAND record.");
+        return;
+    }
+
+    const Record& land =
+        plugin_.records[cell.landRecordIndex];
+
+    const LandDecodeResult decoded =
+        LandDecoder::decode(land);
+
+    if (!decoded.valid)
+    {
+        ImGui::TextWrapped(
+            "LAND %08X: %s",
+            land.formId,
+            decoded.error.c_str());
+        return;
+    }
+
+    ImGui::Text(
+        "LAND: %08X    Grid: %d, %d",
+        land.formId,
+        cell.gridX,
+        cell.gridY);
+
+    ImGui::Text(
+        "Heightfield: %zu x %zu",
+        decoded.heightField.width(),
+        decoded.heightField.height());
+
+    ImGui::Text(
+        "VHGT offset: %.3f",
+        decoded.offset);
+
+    ImGui::Text(
+        "Elevation range: %.3f to %.3f",
+        decoded.heightField.minimum(),
+        decoded.heightField.maximum());
+
+    const std::size_t centre =
+        decoded.heightField.width() / 2;
+
+    ImGui::Text(
+        "Centre sample: %.3f",
+        decoded.heightField.at(centre, centre));
+
+    if (ImGui::BeginTable(
+            "HeightSamples",
+            5,
+            ImGuiTableFlags_Borders |
+            ImGuiTableFlags_RowBg |
+            ImGuiTableFlags_SizingStretchSame))
+    {
+        ImGui::TableSetupColumn("X");
+        ImGui::TableSetupColumn("Y");
+        ImGui::TableSetupColumn("Height");
+        ImGui::TableSetupColumn("X");
+        ImGui::TableSetupColumn("Y");
+        ImGui::TableHeadersRow();
+
+        const std::size_t last =
+            decoded.heightField.width() - 1;
+
+        const std::size_t samples[4][2] =
+        {
+            {0, 0},
+            {last, 0},
+            {0, last},
+            {last, last}
+        };
+
+        for (const auto& sample : samples)
+        {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("%zu", sample[0]);
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%zu", sample[1]);
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%.3f",
+                decoded.heightField.at(
+                    sample[0], sample[1]));
+            ImGui::TableSetColumnIndex(3);
+            ImGui::TextUnformatted("");
+            ImGui::TableSetColumnIndex(4);
+            ImGui::TextUnformatted("");
+        }
+
+        ImGui::EndTable();
     }
 }
 
