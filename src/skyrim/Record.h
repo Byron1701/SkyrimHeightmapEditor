@@ -24,6 +24,14 @@ struct Record
 
     bool compressed = false;
 
+    // GRUP context retained while flattening the record tree.
+    // groupType follows the Bethesda GRUP type definitions; groupLabel
+    // is the raw 4-byte label from the GRUP header.
+    std::int32_t groupType = -1;
+    std::uint32_t groupLabel = 0;
+    std::uint32_t parentWorldspaceFormId = 0;
+    std::uint32_t parentCellFormId = 0;
+
     std::vector<SubRecord> subRecords;
 
     // Retains the original compressed record payload.
