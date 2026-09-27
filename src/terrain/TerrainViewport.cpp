@@ -615,7 +615,7 @@ void TerrainViewport::renderTerrainGpu(
 
     float p[16],v[16],mvp[16];
     perspective(0.9f,static_cast<float>(width)/static_cast<float>(height),
-        32.0f,std::max(200000.0f,cameraDistance*8.0f),p);
+        0.01f,std::max(200000.0f,cameraDistance*8.0f),p);
 
     const float cx=(static_cast<float>(minX)+static_cast<float>(maxX))*0.5f*LandCellSize;
     const float cz=(static_cast<float>(minY)+static_cast<float>(maxY))*0.5f*LandCellSize;
