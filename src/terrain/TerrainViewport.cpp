@@ -345,14 +345,15 @@ void TerrainViewport::draw(
                 shade(normal));
         }
 
-        const ImU32 line =
-            wireframe
-                ? IM_COL32(150, 155, 165, 210)
-                : IM_COL32(65, 68, 74, 100);
+        if (wireframe)
+        {
+            const ImU32 line =
+                IM_COL32(150, 155, 165, 210);
 
-        drawList->AddLine(a, b, line);
-        drawList->AddLine(b, c, line);
-        drawList->AddLine(c, a, line);
+            drawList->AddLine(a, b, line);
+            drawList->AddLine(b, c, line);
+            drawList->AddLine(c, a, line);
+        }
     }
 
     drawList->AddRect(
