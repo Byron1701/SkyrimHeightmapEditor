@@ -691,6 +691,10 @@ void MainWindow::drawTerrainPanel()
                             "Wireframe",
                             &terrainWireframe_);
 
+                        ImGui::SameLine();
+                        if (ImGui::Button("Re-centre View"))
+                            terrainViewport_.resetView();
+
                         if (ImGui::BeginTabBar("SelectedTerrainTabs"))
                         {
                             if (ImGui::BeginTabItem("3D View"))
