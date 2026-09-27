@@ -212,7 +212,6 @@ Record parseRecord(
 
     return record;
 }
-}
 
 void parseContainer(
     const std::vector<std::uint8_t>& data,
