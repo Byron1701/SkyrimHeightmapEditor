@@ -717,6 +717,23 @@ void MainWindow::drawTerrainPanel()
                                 ImGui::EndTabItem();
                             }
 
+                            if (ImGui::BeginTabItem("Heightmap"))
+                            {
+                                ImGui::Text(
+                                    "CELL %08X  |  XCLC: %d, %d",
+                                    cell.formId,
+                                    cell.gridX,
+                                    cell.gridY);
+
+                                ImGui::TextUnformatted(
+                                    "Absolute 16-bit grayscale heightmap");
+
+                                terrainViewport_.drawHeightfield16(
+                                    heightField);
+
+                                ImGui::EndTabItem();
+                            }
+
                             if (ImGui::BeginTabItem("Diagnostics"))
                             {
                                 ImGui::Text(
