@@ -16,6 +16,8 @@ struct TerrainWorldCell
 class TerrainViewport
 {
 public:
+    void resetView();
+
     void draw(
         const HeightField& heightField,
         bool wireframe);
