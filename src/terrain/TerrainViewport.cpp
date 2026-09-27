@@ -22,6 +22,9 @@
 #ifndef GL_R16
 #define GL_R16 0x822A
 #endif
+#ifndef GL_R8
+#define GL_R8 0x8229
+#endif
 #ifndef GL_RED
 #define GL_RED 0x1903
 #endif
@@ -330,7 +333,7 @@ void handleViewportInput(float& yaw, float& pitch, float& distance, float& panX,
     if (std::abs(io.MouseWheel)>0)
     {
         distance*=std::pow(0.85f,io.MouseWheel);
-        distance=std::clamp(distance,1000.0f,100000.0f);
+        distance=std::clamp(distance,50.0f,100000.0f);
     }
 }
 
@@ -721,7 +724,11 @@ void TerrainViewport::drawHeightfield16(const HeightField& heightField)
 
     ImGui::TextUnformatted("16-bit absolute grayscale");
     ImGui::TextUnformatted(
-        "Black = -8192 GU; white = 122878 GU; fixed to Skyrim's supported terrain elevation range.");
+        "Stored pixels use the fixed Skyrim range -8192 to 122878 GU.");
+
+    const float minHeight = heightField.minimum();
+    const float maxHeight = heightField.maximum();
+    const float displayRange = std::max(1.0f, maxHeight - minHeight);
 
     const std::size_t width=heightField.width(), height=heightField.height();
     std::vector<std::uint16_t> pixels(width*height);
@@ -745,9 +752,35 @@ void TerrainViewport::drawHeightfield16(const HeightField& heightField)
         0,GL_RED,GL_UNSIGNED_SHORT,pixels.data());
     glBindTexture(GL_TEXTURE_2D,0);
 
+    ImGui::Text(
+        "Display stretch: %.3f to %.3f GU (stored values remain absolute)",
+        minHeight, maxHeight);
+
+    std::vector<std::uint8_t> preview(width * height);
+    for (std::size_t y = 0; y < height; ++y)
+        for (std::size_t x = 0; x < width; ++x)
+        {
+            const float h = heightField.at(x, y);
+            const float t = std::clamp((h - minHeight) / displayRange, 0.0f, 1.0f);
+            preview[y * width + x] =
+                static_cast<std::uint8_t>(std::lround(t * 255.0f));
+        }
+
+    if (heightmapPreviewTexture_ == 0)
+        glGenTextures(1, &heightmapPreviewTexture_);
+    glBindTexture(GL_TEXTURE_2D, heightmapPreviewTexture_);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8,
+        static_cast<GLsizei>(width), static_cast<GLsizei>(height),
+        0, GL_RED, GL_UNSIGNED_BYTE, preview.data());
+
+    ImGui::TextUnformatted("Contrast preview (relative display only):");
     ImGui::Image(static_cast<ImTextureID>(
-        static_cast<std::uintptr_t>(heightmapTexture_)),
-        ImVec2(mapSize,mapSize));
+        static_cast<std::uintptr_t>(heightmapPreviewTexture_)),
+        ImVec2(mapSize, mapSize));
 
     const std::size_t cx=width/2, cy=height/2;
     const float centreHeight=heightField.at(cx,cy);
@@ -769,4 +802,5 @@ TerrainViewport::~TerrainViewport()
     if(terrainDepthBuffer_) gl.DeleteRenderbuffers(1,&terrainDepthBuffer_);
     if(terrainColorTexture_) glDeleteTextures(1,&terrainColorTexture_);
     if(heightmapTexture_) glDeleteTextures(1,&heightmapTexture_);
+    if(heightmapPreviewTexture_) glDeleteTextures(1,&heightmapPreviewTexture_);
 }
