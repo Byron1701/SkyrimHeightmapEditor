@@ -333,7 +333,7 @@ void handleViewportInput(float& yaw, float& pitch, float& distance, float& panX,
     if (std::abs(io.MouseWheel)>0)
     {
         distance*=std::pow(0.85f,io.MouseWheel);
-        distance=std::clamp(distance,50.0f,100000.0f);
+        distance = std::max(distance, 0.01f);
     }
 }
 
@@ -693,7 +693,7 @@ void TerrainViewport::drawWorldspace(
         if (std::abs(io.MouseWheel) > 0.0f)
         {
             distance *= std::pow(0.85f, io.MouseWheel);
-            distance = std::clamp(distance, 50.0f, 100000.0f);
+            distance = std::max(distance, 0.01f);
         }
     }
 
