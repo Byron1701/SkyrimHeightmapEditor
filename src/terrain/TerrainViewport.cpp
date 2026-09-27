@@ -8,6 +8,20 @@
 #include <cstddef>
 #include <vector>
 
+#ifndef GL_CLAMP_TO_EDGE
+#define GL_CLAMP_TO_EDGE 0x812F
+#endif
+#ifndef GL_TEXTURE_SWIZZLE_RGBA
+#define GL_TEXTURE_SWIZZLE_RGBA 0x8E46
+#endif
+#ifndef GL_R16
+#define GL_R16 0x822A
+#endif
+#ifndef GL_RED
+#define GL_RED 0x1903
+#endif
+
+
 namespace
 {
 constexpr float LandVertexSpacing = 128.0f;
@@ -621,8 +635,8 @@ void TerrainViewport::drawHeightfield16(
     glBindTexture(GL_TEXTURE_2D, 0);
 
     ImGui::Image(
-        reinterpret_cast<ImTextureID>(
-            static_cast<intptr_t>(heightmapTexture_)),
+        static_cast<ImTextureID>(
+            static_cast<std::uintptr_t>(heightmapTexture_)),
         ImVec2(mapSize, mapSize));
 
     const std::size_t centreX = width / 2;
