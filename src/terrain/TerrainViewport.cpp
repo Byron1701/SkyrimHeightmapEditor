@@ -693,7 +693,7 @@ void TerrainViewport::drawWorldspace(
         if (std::abs(io.MouseWheel) > 0.0f)
         {
             distance *= std::pow(0.85f, io.MouseWheel);
-            distance = std::clamp(distance, 1000.0f, 100000.0f);
+            distance = std::clamp(distance, 50.0f, 100000.0f);
         }
     }
 
@@ -756,14 +756,19 @@ void TerrainViewport::drawHeightfield16(const HeightField& heightField)
         "Display stretch: %.3f to %.3f GU (stored values remain absolute)",
         minHeight, maxHeight);
 
-    std::vector<std::uint8_t> preview(width * height);
+    std::vector<std::uint8_t> preview(width * height * 4);
     for (std::size_t y = 0; y < height; ++y)
         for (std::size_t x = 0; x < width; ++x)
         {
             const float h = heightField.at(x, y);
             const float t = std::clamp((h - minHeight) / displayRange, 0.0f, 1.0f);
-            preview[y * width + x] =
+            const std::uint8_t v =
                 static_cast<std::uint8_t>(std::lround(t * 255.0f));
+            const std::size_t i = (y * width + x) * 4;
+            preview[i + 0] = v;
+            preview[i + 1] = v;
+            preview[i + 2] = v;
+            preview[i + 3] = 255;
         }
 
     if (heightmapPreviewTexture_ == 0)
@@ -775,7 +780,7 @@ void TerrainViewport::drawHeightfield16(const HeightField& heightField)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R8,
         static_cast<GLsizei>(width), static_cast<GLsizei>(height),
-        0, GL_RED, GL_UNSIGNED_BYTE, preview.data());
+        0, GL_RGBA, GL_UNSIGNED_BYTE, preview.data());
 
     ImGui::TextUnformatted("Contrast preview (relative display only):");
     ImGui::Image(static_cast<ImTextureID>(
