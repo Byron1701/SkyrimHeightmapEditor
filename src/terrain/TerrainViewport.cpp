@@ -132,18 +132,18 @@ using PFNGLDELETEBUFFERSPROC = void (APIENTRY*)(GLsizei, const GLuint*);
 using PFNGLBINDBUFFERPROC = void (APIENTRY*)(GLenum, GLuint);
 using GLsizeiptr_compat = std::ptrdiff_t;
 using GLchar_compat = char;
-using PFNGLBUFFERDATAPROC = void (APIENTRY*)(GLenum, GLsizeiptr_compat, const void*, GLenum);
+using PFNGLBUFFERDATAPROC = void (APIENTRY*)(GLenum, GLsizeiptr_compat_compat, const void*, GLenum);
 using PFNGLCREATESHADERPROC = GLuint (APIENTRY*)(GLenum);
-using PFNGLSHADERSOURCEPROC = void (APIENTRY*)(GLuint, GLsizei, const GLchar_compat* const*, const GLint*);
+using PFNGLSHADERSOURCEPROC = void (APIENTRY*)(GLuint, GLsizei, const GLchar_compat_compat* const*, const GLint*);
 using PFNGLCOMPILESHADERPROC = void (APIENTRY*)(GLuint);
 using PFNGLGETSHADERIVPROC = void (APIENTRY*)(GLuint, GLenum, GLint*);
-using PFNGLGETSHADERINFOLOGPROC = void (APIENTRY*)(GLuint, GLsizei, GLsizei*, GLchar_compat*);
+using PFNGLGETSHADERINFOLOGPROC = void (APIENTRY*)(GLuint, GLsizei, GLsizei*, GLchar_compat_compat*);
 using PFNGLDELETESHADERPROC = void (APIENTRY*)(GLuint);
 using PFNGLCREATEPROGRAMPROC = GLuint (APIENTRY*)();
 using PFNGLATTACHSHADERPROC = void (APIENTRY*)(GLuint, GLuint);
 using PFNGLLINKPROGRAMPROC = void (APIENTRY*)(GLuint);
 using PFNGLGETPROGRAMIVPROC = void (APIENTRY*)(GLuint, GLenum, GLint*);
-using PFNGLGETPROGRAMINFOLOGPROC = void (APIENTRY*)(GLuint, GLsizei, GLsizei*, GLchar*);
+using PFNGLGETPROGRAMINFOLOGPROC = void (APIENTRY*)(GLuint, GLsizei, GLsizei*, GLchar_compat*);
 using PFNGLDELETEPROGRAMPROC = void (APIENTRY*)(GLuint);
 using PFNGLUSEPROGRAMPROC = void (APIENTRY*)(GLuint);
 using PFNGLGETUNIFORMLOCATIONPROC = GLint (APIENTRY*)(GLuint, const char*);
@@ -564,11 +564,11 @@ void TerrainViewport::rebuildTerrainMesh(const std::vector<TerrainWorldCell>& ce
     gl.BindVertexArray(terrainVao_);
     gl.BindBuffer(GL_ARRAY_BUFFER,terrainVbo_);
     gl.BufferData(GL_ARRAY_BUFFER,
-        static_cast<GLsizeiptr_compat>(vertices.size()*sizeof(GpuVertex)),
+        static_cast<GLsizeiptr_compat_compat>(vertices.size()*sizeof(GpuVertex)),
         vertices.data(),GL_STATIC_DRAW);
     gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER,terrainEbo_);
     gl.BufferData(GL_ELEMENT_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(indices.size()*sizeof(std::uint32_t)),
+        static_cast<GLsizeiptr_compat>(indices.size()*sizeof(std::uint32_t)),
         indices.data(),GL_STATIC_DRAW);
     gl.EnableVertexAttribArray(0);
     gl.VertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,sizeof(GpuVertex),(void*)0);
