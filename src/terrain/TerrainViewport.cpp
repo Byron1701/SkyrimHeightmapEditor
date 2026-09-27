@@ -187,7 +187,7 @@ void handleViewportInput(
     {
         yaw += io.MouseDelta.x * 0.012f;
         pitch += io.MouseDelta.y * 0.012f;
-        pitch = std::clamp(pitch, -1.45f, 1.45f);
+        pitch = std::clamp(pitch, -1.570795f, 1.570795f);
     }
 
     if (ImGui::IsMouseDragging(ImGuiMouseButton_Right))
