@@ -214,6 +214,106 @@ Record parseRecord(
 }
 }
 
+void parseContainer(
+    const std::vector<std::uint8_t>& data,
+    std::size_t offset,
+    std::size_t end,
+    std::vector<Record>& records)
+{
+    while (offset < end)
+    {
+        requireRange(
+            offset,
+            RecordHeaderSize,
+            end,
+            "record header");
+
+        const std::string type =
+            readType(data, offset);
+
+        const std::uint32_t size =
+            readU32(data, offset + 4);
+
+        /*
+         * GRUP is a container rather than a normal TES record.
+         * Its size field covers everything after the initial
+         * 8-byte signature/size pair, so the group's end is
+         * offset + 8 + size. Child records begin at +24.
+         */
+        if (type == "GRUP")
+        {
+            const std::size_t groupEnd =
+                offset + 8 + static_cast<std::size_t>(size);
+
+            requireRange(
+                offset,
+                8 + static_cast<std::size_t>(size),
+                end,
+                "GRUP");
+
+            parseContainer(
+                data,
+                offset + RecordHeaderSize,
+                groupEnd,
+                records);
+
+            offset = groupEnd;
+            continue;
+        }
+
+        requireRange(
+            offset + RecordHeaderSize,
+            size,
+            end,
+            "record payload");
+
+        Record record;
+
+        record.type = type;
+        record.flags = readU32(data, offset + 8);
+        record.formId = readU32(data, offset + 12);
+        record.timestamp = readU16(data, offset + 16);
+        record.vcs1 = readU16(data, offset + 18);
+        record.version = readU16(data, offset + 20);
+        record.unknown = readU16(data, offset + 22);
+        record.headerOffset = offset;
+        record.dataOffset = offset + RecordHeaderSize;
+        record.compressed = (record.flags & CompressedFlag) != 0;
+
+        if (record.compressed)
+        {
+            record.payload.assign(
+                data.begin() + static_cast<std::ptrdiff_t>(record.dataOffset),
+                data.begin() + static_cast<std::ptrdiff_t>(record.dataOffset + size));
+        }
+        else
+        {
+            Record parsed =
+                parseRecord(
+                    data,
+                    offset,
+                    record.dataOffset,
+                    size);
+
+            parsed.flags = record.flags;
+            parsed.formId = record.formId;
+            parsed.timestamp = record.timestamp;
+            parsed.vcs1 = record.vcs1;
+            parsed.version = record.version;
+            parsed.unknown = record.unknown;
+            parsed.compressed = false;
+            record = std::move(parsed);
+        }
+
+        records.push_back(std::move(record));
+
+        offset +=
+            RecordHeaderSize +
+            static_cast<std::size_t>(size);
+    }
+}
+}
+
 Plugin EspReader::read(
     const std::filesystem::path& path)
 {
@@ -240,116 +340,14 @@ Plugin EspReader::read(
     }
 
     Plugin plugin;
+    plugin.path = path.string();
+    plugin.filename = path.filename().string();
 
-    plugin.path =
-        path.string();
-
-    plugin.filename =
-        path.filename().string();
-
-    std::size_t offset = 0;
-
-    while (offset < data.size())
-    {
-        requireRange(
-            offset,
-            RecordHeaderSize,
-            data.size(),
-            "record header");
-
-        Record record;
-
-        record.type =
-            readType(data, offset);
-
-        const std::uint32_t dataSize =
-            readU32(data, offset + 4);
-
-        record.flags =
-            readU32(data, offset + 8);
-
-        record.formId =
-            readU32(data, offset + 12);
-
-        record.timestamp =
-            readU16(data, offset + 16);
-
-        record.vcs1 =
-            readU16(data, offset + 18);
-
-        record.version =
-            readU16(data, offset + 20);
-
-        record.unknown =
-            readU16(data, offset + 22);
-
-        record.headerOffset =
-            offset;
-
-        record.dataOffset =
-            offset + RecordHeaderSize;
-
-        record.compressed =
-            (record.flags &
-             CompressedFlag) != 0;
-
-        requireRange(
-            record.dataOffset,
-            dataSize,
-            data.size(),
-            "record payload");
-
-        if (record.compressed)
-        {
-            record.payload.assign(
-                data.begin() +
-                    static_cast<std::ptrdiff_t>(
-                        record.dataOffset),
-                data.begin() +
-                    static_cast<std::ptrdiff_t>(
-                        record.dataOffset + dataSize));
-        }
-        else
-        {
-            Record parsed =
-                parseRecord(
-                    data,
-                    offset,
-                    record.dataOffset,
-                    dataSize);
-
-            parsed.flags =
-                record.flags;
-
-            parsed.formId =
-                record.formId;
-
-            parsed.timestamp =
-                record.timestamp;
-
-            parsed.vcs1 =
-                record.vcs1;
-
-            parsed.version =
-                record.version;
-
-            parsed.unknown =
-                record.unknown;
-
-            parsed.compressed =
-                false;
-
-            record =
-                std::move(parsed);
-        }
-
-        plugin.records.push_back(
-            std::move(record));
-
-        offset +=
-            RecordHeaderSize +
-            dataSize;
-    }
+    parseContainer(
+        data,
+        0,
+        data.size(),
+        plugin.records);
 
     return plugin;
 }
