@@ -4,6 +4,7 @@
 #include <cstring>
 #include <limits>
 #include <unordered_map>
+#include <utility>
 
 namespace
 {
@@ -68,21 +69,23 @@ bool readCellCoordinates(
         return false;
     }
 
-    x = static_cast<int>(readI32(
-        SubRecord{
-            .type = "X",
-            .data = std::vector<std::uint8_t>(
-                xclc->data.begin(),
-                xclc->data.begin() + 4)
-        }));
+    const std::uint32_t rawX =
+        static_cast<std::uint32_t>(xclc->data[0]) |
+        (static_cast<std::uint32_t>(xclc->data[1]) << 8) |
+        (static_cast<std::uint32_t>(xclc->data[2]) << 16) |
+        (static_cast<std::uint32_t>(xclc->data[3]) << 24);
 
-    y = static_cast<int>(readI32(
-        SubRecord{
-            .type = "Y",
-            .data = std::vector<std::uint8_t>(
-                xclc->data.begin() + 4,
-                xclc->data.begin() + 8)
-        }));
+    const std::uint32_t rawY =
+        static_cast<std::uint32_t>(xclc->data[4]) |
+        (static_cast<std::uint32_t>(xclc->data[5]) << 8) |
+        (static_cast<std::uint32_t>(xclc->data[6]) << 16) |
+        (static_cast<std::uint32_t>(xclc->data[7]) << 24);
+
+    x = static_cast<int>(
+        static_cast<std::int32_t>(rawX));
+
+    y = static_cast<int>(
+        static_cast<std::int32_t>(rawY));
 
     return true;
 }
