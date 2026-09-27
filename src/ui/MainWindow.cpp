@@ -563,6 +563,84 @@ void MainWindow::drawTerrainPanel()
         decoded.heightField.minimum(),
         decoded.heightField.maximum());
 
+    /*
+     * Small diagnostic heatmap. This is deliberately drawn directly
+     * from HeightField rather than introducing a terrain renderer yet.
+     * It gives us an immediate visual check that VHGT reconstruction
+     * has the expected spatial shape and orientation.
+     */
+    const float availableWidth =
+        ImGui::GetContentRegionAvail().x;
+
+    const float mapSize =
+        availableWidth > 260.0f
+            ? (availableWidth < 520.0f
+                ? availableWidth
+                : 520.0f)
+            : 260.0f;
+
+    ImGui::BeginChild(
+        "TerrainHeightmapPreview",
+        ImVec2(mapSize, mapSize + 25.0f),
+        true);
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    const ImVec2 origin = ImGui::GetCursorScreenPos();
+    const float cellSize =
+        mapSize /
+        static_cast<float>(decoded.heightField.width());
+
+    const float minHeight = decoded.heightField.minimum();
+    const float maxHeight = decoded.heightField.maximum();
+    const float range = maxHeight - minHeight;
+
+    for (std::size_t y = 0;
+         y < decoded.heightField.height();
+         ++y)
+    {
+        for (std::size_t x = 0;
+             x < decoded.heightField.width();
+             ++x)
+        {
+            const float height =
+                decoded.heightField.at(x, y);
+
+            const float normalised =
+                range > 0.0f
+                    ? (height - minHeight) / range
+                    : 0.5f;
+
+            const int value =
+                static_cast<int>(
+                    normalised * 255.0f);
+
+            const ImU32 grey =
+                IM_COL32(value, value, value, 255);
+
+            const ImVec2 a(
+                origin.x +
+                    static_cast<float>(x) * cellSize,
+                origin.y +
+                    static_cast<float>(y) * cellSize);
+
+            const ImVec2 b(
+                origin.x +
+                    static_cast<float>(x + 1) * cellSize,
+                origin.y +
+                    static_cast<float>(y + 1) * cellSize);
+
+            drawList->AddRectFilled(a, b, grey);
+        }
+    }
+
+    ImGui::Dummy(
+        ImVec2(mapSize, mapSize));
+
+    ImGui::TextUnformatted(
+        "Top = stored VHGT row 0; left/right = X.");
+
+    ImGui::EndChild();
+
     const std::size_t centre =
         decoded.heightField.width() / 2;
 
