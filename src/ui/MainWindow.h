@@ -1,6 +1,7 @@
 #pragma once
 
 #include "plugin/Plugin.h"
+#include "terrain/TerrainViewport.h"
 
 #include <string>
 
@@ -35,4 +36,6 @@ private:
     int selectedWorldspace_ = -1;
     int selectedCell_ = -1;
     bool exitRequested_ = false;
+    bool terrainWireframe_ = false;
+    TerrainViewport terrainViewport_;
 };
