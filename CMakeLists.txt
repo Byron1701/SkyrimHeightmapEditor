@@ -79,7 +79,7 @@ add_executable(SkyrimHeightmapEditor
 )
 
 target_include_directories(SkyrimHeightmapEditor PRIVATE src)
-target_link_libraries(SkyrimHeightmapEditor PRIVATE imgui ZLIB::ZLIB)
+target_link_libraries(SkyrimHeightmapEditor PRIVATE imgui zlibstatic)
 
 if(MSVC)
     target_compile_options(SkyrimHeightmapEditor PRIVATE /W4 /permissive-)
