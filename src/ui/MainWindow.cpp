@@ -510,12 +510,13 @@ void MainWindow::drawWorldIndexPanel()
 
 void MainWindow::drawTerrainPanel()
 {
-    ImGui::TextUnformatted("Selected LAND heightfield");
+    ImGui::TextUnformatted("Selected CELL terrain");
 
     if (selectedCell_ < 0 ||
         selectedCell_ >= static_cast<int>(plugin_.cells.size()))
     {
-        ImGui::TextUnformatted("Select a cell with an indexed LAND record.");
+        ImGui::TextUnformatted(
+            "Select a cell with an indexed LAND record.");
         return;
     }
 
@@ -524,7 +525,8 @@ void MainWindow::drawTerrainPanel()
 
     if (cell.landRecordIndex == static_cast<std::size_t>(-1))
     {
-        ImGui::TextUnformatted("The selected cell has no indexed LAND record.");
+        ImGui::TextUnformatted(
+            "The selected cell has no indexed LAND record.");
         return;
     }
 
@@ -544,153 +546,159 @@ void MainWindow::drawTerrainPanel()
     }
 
     ImGui::Text(
-        "LAND: %08X    Grid: %d, %d",
-        land.formId,
+        "CELL %08X    Grid: %d, %d    LAND: %08X",
+        cell.formId,
         cell.gridX,
-        cell.gridY);
+        cell.gridY,
+        land.formId);
 
-    ImGui::Text(
-        "Heightfield: %zu x %zu",
-        decoded.heightField.width(),
-        decoded.heightField.height());
+    ImGui::SameLine();
 
-    ImGui::Text(
-        "VHGT offset: %.3f",
-        decoded.offset);
+    ImGui::Checkbox(
+        "Wireframe",
+        &terrainWireframe_);
 
-    ImGui::Text(
-        "Elevation range: %.3f to %.3f",
-        decoded.heightField.minimum(),
-        decoded.heightField.maximum());
-
-    /*
-     * Small diagnostic heatmap. This is deliberately drawn directly
-     * from HeightField rather than introducing a terrain renderer yet.
-     * It gives us an immediate visual check that VHGT reconstruction
-     * has the expected spatial shape and orientation.
-     */
-    const float availableWidth =
-        ImGui::GetContentRegionAvail().x;
-
-    const float mapSize =
-        availableWidth > 260.0f
-            ? (availableWidth < 520.0f
-                ? availableWidth
-                : 520.0f)
-            : 260.0f;
-
-    ImGui::BeginChild(
-        "TerrainHeightmapPreview",
-        ImVec2(mapSize, mapSize + 25.0f),
-        true);
-
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    const ImVec2 origin = ImGui::GetCursorScreenPos();
-    const float cellSize =
-        mapSize /
-        static_cast<float>(decoded.heightField.width());
-
-    const float minHeight = decoded.heightField.minimum();
-    const float maxHeight = decoded.heightField.maximum();
-    const float range = maxHeight - minHeight;
-
-    for (std::size_t y = 0;
-         y < decoded.heightField.height();
-         ++y)
+    if (ImGui::BeginTabBar("TerrainTabs"))
     {
-        for (std::size_t x = 0;
-             x < decoded.heightField.width();
-             ++x)
+        if (ImGui::BeginTabItem("3D View"))
         {
-            const float height =
-                decoded.heightField.at(x, y);
+            ImGui::Text(
+                "33 x 33 vertices | 32 x 32 quads | 2,048 triangles | "
+                "128 Skyrim units between vertices");
 
-            const float normalised =
-                range > 0.0f
-                    ? (height - minHeight) / range
-                    : 0.5f;
+            ImGui::BeginChild(
+                "Terrain3DViewportChild",
+                ImVec2(0.0f, 430.0f),
+                true);
 
-            const int value =
-                static_cast<int>(
-                    normalised * 255.0f);
+            terrainViewport_.draw(
+                decoded.heightField,
+                terrainWireframe_);
 
-            const ImU32 grey =
-                IM_COL32(value, value, value, 255);
+            ImGui::EndChild();
 
-            const ImVec2 a(
-                origin.x +
-                    static_cast<float>(x) * cellSize,
-                origin.y +
-                    static_cast<float>(y) * cellSize);
-
-            const ImVec2 b(
-                origin.x +
-                    static_cast<float>(x + 1) * cellSize,
-                origin.y +
-                    static_cast<float>(y + 1) * cellSize);
-
-            drawList->AddRectFilled(a, b, grey);
+            ImGui::EndTabItem();
         }
-    }
 
-    ImGui::Dummy(
-        ImVec2(mapSize, mapSize));
-
-    ImGui::TextUnformatted(
-        "Top = stored VHGT row 0; left/right = X.");
-
-    ImGui::EndChild();
-
-    const std::size_t centre =
-        decoded.heightField.width() / 2;
-
-    ImGui::Text(
-        "Centre sample: %.3f",
-        decoded.heightField.at(centre, centre));
-
-    if (ImGui::BeginTable(
-            "HeightSamples",
-            5,
-            ImGuiTableFlags_Borders |
-            ImGuiTableFlags_RowBg |
-            ImGuiTableFlags_SizingStretchSame))
-    {
-        ImGui::TableSetupColumn("X");
-        ImGui::TableSetupColumn("Y");
-        ImGui::TableSetupColumn("Height");
-        ImGui::TableSetupColumn("X");
-        ImGui::TableSetupColumn("Y");
-        ImGui::TableHeadersRow();
-
-        const std::size_t last =
-            decoded.heightField.width() - 1;
-
-        const std::size_t samples[4][2] =
+        if (ImGui::BeginTabItem("Heightfield"))
         {
-            {0, 0},
-            {last, 0},
-            {0, last},
-            {last, last}
-        };
+            ImGui::Text(
+                "VHGT offset: %.3f",
+                decoded.offset);
 
-        for (const auto& sample : samples)
-        {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("%zu", sample[0]);
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Text("%zu", sample[1]);
-            ImGui::TableSetColumnIndex(2);
-            ImGui::Text("%.3f",
+            ImGui::Text(
+                "Elevation range: %.3f to %.3f",
+                decoded.heightField.minimum(),
+                decoded.heightField.maximum());
+
+            const float availableWidth =
+                ImGui::GetContentRegionAvail().x;
+
+            const float mapSize =
+                availableWidth > 260.0f
+                    ? (availableWidth < 520.0f
+                        ? availableWidth
+                        : 520.0f)
+                    : 260.0f;
+
+            ImGui::BeginChild(
+                "TerrainHeightmapPreview",
+                ImVec2(mapSize, mapSize + 25.0f),
+                true);
+
+            ImDrawList* drawList =
+                ImGui::GetWindowDrawList();
+
+            const ImVec2 origin =
+                ImGui::GetCursorScreenPos();
+
+            const float cellSize =
+                mapSize /
+                static_cast<float>(
+                    decoded.heightField.width());
+
+            const float minHeight =
+                decoded.heightField.minimum();
+
+            const float maxHeight =
+                decoded.heightField.maximum();
+
+            const float range =
+                maxHeight - minHeight;
+
+            for (std::size_t y = 0;
+                 y < decoded.heightField.height();
+                 ++y)
+            {
+                for (std::size_t x = 0;
+                     x < decoded.heightField.width();
+                     ++x)
+                {
+                    const float height =
+                        decoded.heightField.at(x, y);
+
+                    const float normalised =
+                        range > 0.0f
+                            ? (height - minHeight) / range
+                            : 0.5f;
+
+                    const int value =
+                        static_cast<int>(
+                            normalised * 255.0f);
+
+                    const ImU32 grey =
+                        IM_COL32(
+                            value,
+                            value,
+                            value,
+                            255);
+
+                    const ImVec2 a(
+                        origin.x +
+                            static_cast<float>(x) *
+                            cellSize,
+                        origin.y +
+                            static_cast<float>(y) *
+                            cellSize);
+
+                    const ImVec2 b(
+                        origin.x +
+                            static_cast<float>(x + 1) *
+                            cellSize,
+                        origin.y +
+                            static_cast<float>(y + 1) *
+                            cellSize);
+
+                    drawList->AddRectFilled(
+                        a,
+                        b,
+                        grey);
+                }
+            }
+
+            ImGui::Dummy(
+                ImVec2(
+                    mapSize,
+                    mapSize));
+
+            ImGui::TextUnformatted(
+                "Top = stored VHGT row 0; left/right = X.");
+
+            ImGui::EndChild();
+
+            const std::size_t centre =
+                decoded.heightField.width() / 2;
+
+            ImGui::Text(
+                "Centre sample: %.3f",
                 decoded.heightField.at(
-                    sample[0], sample[1]));
-            ImGui::TableSetColumnIndex(3);
-            ImGui::TextUnformatted("");
-            ImGui::TableSetColumnIndex(4);
-            ImGui::TextUnformatted("");
+                    centre,
+                    centre));
+
+            ImGui::EndTabItem();
         }
 
-        ImGui::EndTable();
+        ImGui::EndTabBar();
     }
 }
 
