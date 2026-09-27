@@ -809,3 +809,12 @@ TerrainViewport::~TerrainViewport()
     if(heightmapTexture_) glDeleteTextures(1,&heightmapTexture_);
     if(heightmapPreviewTexture_) glDeleteTextures(1,&heightmapPreviewTexture_);
 }
+
+void TerrainViewport::resetView()
+{
+    yaw = 0.75f;
+    pitch = 0.75f;
+    distance = 12000.0f;
+    panX = 0.0f;
+    panY = 0.0f;
+}
