@@ -11,7 +11,7 @@ public:
 
     float yaw = 0.75f;
     float pitch = 0.75f;
-    float distance = 6000.0f;
+    float distance = 12000.0f;
     float panX = 0.0f;
     float panY = 0.0f;
 };
