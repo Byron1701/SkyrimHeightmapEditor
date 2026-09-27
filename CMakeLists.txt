@@ -76,6 +76,8 @@ add_executable(SkyrimHeightmapEditor
 
     src/terrain/HeightField.cpp
     src/terrain/HeightField.h
+    src/terrain/TerrainViewport.cpp
+    src/terrain/TerrainViewport.h
 )
 
 target_include_directories(SkyrimHeightmapEditor PRIVATE src)
