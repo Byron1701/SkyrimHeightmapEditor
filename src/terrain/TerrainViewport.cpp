@@ -611,11 +611,11 @@ void TerrainViewport::renderTerrainGpu(
         (static_cast<float>(maxY-minY)+1.0f)*LandCellSize);
 
     const float sceneScale=std::max(1.0f,extent/8192.0f);
-    const float cameraDistance=distance*sceneScale;
+    const float cameraDistance=std::max(distance*sceneScale,0.000001f);
 
     float p[16],v[16],mvp[16];
     perspective(0.9f,static_cast<float>(width)/static_cast<float>(height),
-        0.01f,std::max(200000.0f,cameraDistance*8.0f),p);
+        0.000001f,std::max(100000000.0f,cameraDistance*1000.0f),p);
 
     const float cx=(static_cast<float>(minX)+static_cast<float>(maxX))*0.5f*LandCellSize;
     const float cz=(static_cast<float>(minY)+static_cast<float>(maxY))*0.5f*LandCellSize;
@@ -692,8 +692,8 @@ void TerrainViewport::drawWorldspace(
         }
         if (std::abs(io.MouseWheel) > 0.0f)
         {
-            distance *= std::pow(0.85f, io.MouseWheel);
-            distance = std::max(distance, 0.01f);
+            distance *= std::exp(-io.MouseWheel * 0.35f);
+            distance = std::max(distance, 0.000001f);
         }
     }
 
