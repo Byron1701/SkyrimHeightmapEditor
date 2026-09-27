@@ -20,6 +20,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glfw)
 
 FetchContent_Declare(
+    zlib
+    GIT_REPOSITORY https://github.com/madler/zlib.git
+    GIT_TAG v1.3.1
+)
+FetchContent_MakeAvailable(zlib)
+
+FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG v1.92.2b
@@ -72,7 +79,7 @@ add_executable(SkyrimHeightmapEditor
 )
 
 target_include_directories(SkyrimHeightmapEditor PRIVATE src)
-target_link_libraries(SkyrimHeightmapEditor PRIVATE imgui)
+target_link_libraries(SkyrimHeightmapEditor PRIVATE imgui ZLIB::ZLIB)
 
 if(MSVC)
     target_compile_options(SkyrimHeightmapEditor PRIVATE /W4 /permissive-)
