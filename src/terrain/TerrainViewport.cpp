@@ -766,8 +766,8 @@ void TerrainViewport::drawHeightfield16(const HeightField& heightField)
                 static_cast<std::uint8_t>(std::lround(t * 255.0f));
             const std::size_t i = (y * width + x) * 4;
             preview[i + 0] = v;
-            preview[i + 1] = v;
-            preview[i + 2] = v;
+            preview[i + 1] = 0;
+            preview[i + 2] = 0;
             preview[i + 3] = 255;
         }
 
@@ -778,7 +778,10 @@ void TerrainViewport::drawHeightfield16(const HeightField& heightField)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8,
+    // The preview is deliberately a black-to-red diagnostic view:
+    // low terrain is black, high terrain is pure red.  Keep this separate
+    // from the actual 16-bit grayscale heightmap texture above.
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
         static_cast<GLsizei>(width), static_cast<GLsizei>(height),
         0, GL_RGBA, GL_UNSIGNED_BYTE, preview.data());
 
@@ -812,9 +815,13 @@ TerrainViewport::~TerrainViewport()
 
 void TerrainViewport::resetView()
 {
-    yaw = 0.75f;
-    pitch = 0.75f;
-    distance = 12000.0f;
+    // Return to a known, visible orbit above the automatically centred
+    // terrain target.  drawWorldspace() supplies the target centre from
+    // the loaded cell bounds, so resetView only needs to reset the camera
+    // orbit itself.
+    yaw = 0.0f;
+    pitch = 0.95f;
+    distance = 6000.0f;
     panX = 0.0f;
     panY = 0.0f;
 }
