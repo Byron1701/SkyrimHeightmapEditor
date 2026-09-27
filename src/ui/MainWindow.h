@@ -2,8 +2,10 @@
 
 #include "plugin/Plugin.h"
 #include "terrain/TerrainViewport.h"
+#include "terrain/HeightField.h"
 
 #include <string>
+#include <unordered_map>
 
 class MainWindow
 {
@@ -22,6 +24,7 @@ private:
     void drawPluginPanel();
     void drawRecordPanel();
     void drawTerrainPanel();
+    void rebuildTerrainCache();
     void drawWorldIndexPanel();
     void openPlugin();
 
@@ -38,4 +41,5 @@ private:
     bool exitRequested_ = false;
     bool terrainWireframe_ = false;
     TerrainViewport terrainViewport_;
+    std::unordered_map<std::size_t, HeightField> terrainCache_;
 };
