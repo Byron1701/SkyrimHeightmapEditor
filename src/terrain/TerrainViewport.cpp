@@ -214,8 +214,8 @@ void TerrainViewport::draw(
         if (ImGui::IsMouseDragging(
                 ImGuiMouseButton_Right))
         {
-            pan.x += io.MouseDelta.x;
-            pan.y += io.MouseDelta.y;
+            panX += io.MouseDelta.x;
+            panY += io.MouseDelta.y;
         }
 
         if (std::abs(io.MouseWheel) > 0.0f)
@@ -312,7 +312,7 @@ void TerrainViewport::draw(
                 distance,
                 centre,
                 scale,
-                pan);
+                ImVec2(panX, panY));
 
         const ImVec2 b =
             project(
