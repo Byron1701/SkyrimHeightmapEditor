@@ -399,7 +399,7 @@ void MainWindow::drawWorldIndexPanel()
                         cell.gridX,
                         cell.gridY,
                         cell.formId,
-                        cell.landRecordIndex != InvalidIndex
+                        cell.landRecordIndex != static_cast<std::size_t>(-1)
                             ? "  [LAND]"
                             : "");
                 }
@@ -410,7 +410,7 @@ void MainWindow::drawWorldIndexPanel()
                         sizeof(label),
                         "?, ?  %08X%s",
                         cell.formId,
-                        cell.landRecordIndex != InvalidIndex
+                        cell.landRecordIndex != static_cast<std::size_t>(-1)
                             ? "  [LAND]"
                             : "");
                 }
@@ -468,7 +468,7 @@ void MainWindow::drawWorldIndexPanel()
                         "Grid: unavailable (no XCLC)");
                 }
 
-                if (cell.landRecordIndex != InvalidIndex)
+                if (cell.landRecordIndex != static_cast<std::size_t>(-1))
                 {
                     const Record& land =
                         plugin_.records[
