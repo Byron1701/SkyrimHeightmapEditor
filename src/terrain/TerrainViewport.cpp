@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstddef>
 #include <cstring>
 #include <limits>
 #include <string>
@@ -129,12 +130,14 @@ using PFNGLBINDVERTEXARRAYPROC = void (APIENTRY*)(GLuint);
 using PFNGLGENBUFFERSPROC = void (APIENTRY*)(GLsizei, GLuint*);
 using PFNGLDELETEBUFFERSPROC = void (APIENTRY*)(GLsizei, const GLuint*);
 using PFNGLBINDBUFFERPROC = void (APIENTRY*)(GLenum, GLuint);
-using PFNGLBUFFERDATAPROC = void (APIENTRY*)(GLenum, GLsizeiptr, const void*, GLenum);
+using GLsizeiptr_compat = std::ptrdiff_t;
+using GLchar_compat = char;
+using PFNGLBUFFERDATAPROC = void (APIENTRY*)(GLenum, GLsizeiptr_compat, const void*, GLenum);
 using PFNGLCREATESHADERPROC = GLuint (APIENTRY*)(GLenum);
-using PFNGLSHADERSOURCEPROC = void (APIENTRY*)(GLuint, GLsizei, const GLchar* const*, const GLint*);
+using PFNGLSHADERSOURCEPROC = void (APIENTRY*)(GLuint, GLsizei, const GLchar_compat* const*, const GLint*);
 using PFNGLCOMPILESHADERPROC = void (APIENTRY*)(GLuint);
 using PFNGLGETSHADERIVPROC = void (APIENTRY*)(GLuint, GLenum, GLint*);
-using PFNGLGETSHADERINFOLOGPROC = void (APIENTRY*)(GLuint, GLsizei, GLsizei*, GLchar*);
+using PFNGLGETSHADERINFOLOGPROC = void (APIENTRY*)(GLuint, GLsizei, GLsizei*, GLchar_compat*);
 using PFNGLDELETESHADERPROC = void (APIENTRY*)(GLuint);
 using PFNGLCREATEPROGRAMPROC = GLuint (APIENTRY*)();
 using PFNGLATTACHSHADERPROC = void (APIENTRY*)(GLuint, GLuint);
@@ -143,7 +146,7 @@ using PFNGLGETPROGRAMIVPROC = void (APIENTRY*)(GLuint, GLenum, GLint*);
 using PFNGLGETPROGRAMINFOLOGPROC = void (APIENTRY*)(GLuint, GLsizei, GLsizei*, GLchar*);
 using PFNGLDELETEPROGRAMPROC = void (APIENTRY*)(GLuint);
 using PFNGLUSEPROGRAMPROC = void (APIENTRY*)(GLuint);
-using PFNGLGETUNIFORMLOCATIONPROC = GLint (APIENTRY*)(GLuint, const GLchar*);
+using PFNGLGETUNIFORMLOCATIONPROC = GLint (APIENTRY*)(GLuint, const char*);
 using PFNGLUNIFORMMATRIX4FVPROC = void (APIENTRY*)(GLint, GLsizei, GLboolean, const GLfloat*);
 using PFNGLUNIFORM3FPROC = void (APIENTRY*)(GLint, GLfloat, GLfloat, GLfloat);
 using PFNGLENABLEVERTEXATTRIBARRAYPROC = void (APIENTRY*)(GLuint);
@@ -561,7 +564,7 @@ void TerrainViewport::rebuildTerrainMesh(const std::vector<TerrainWorldCell>& ce
     gl.BindVertexArray(terrainVao_);
     gl.BindBuffer(GL_ARRAY_BUFFER,terrainVbo_);
     gl.BufferData(GL_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(vertices.size()*sizeof(GpuVertex)),
+        static_cast<GLsizeiptr_compat>(vertices.size()*sizeof(GpuVertex)),
         vertices.data(),GL_STATIC_DRAW);
     gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER,terrainEbo_);
     gl.BufferData(GL_ELEMENT_ARRAY_BUFFER,
@@ -620,7 +623,7 @@ void TerrainViewport::renderTerrainGpu(
     glViewport(0,0,width,height);
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
-    gl.ClearColor(0.094f,0.102f,0.118f,1.0f);
+    ::glClearColor(0.094f,0.102f,0.118f,1.0f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
     gl.UseProgram(terrainProgram_);
