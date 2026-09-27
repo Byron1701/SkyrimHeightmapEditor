@@ -166,28 +166,18 @@ std::string readType(
         4);
 }
 
-Record parseRecord(
+std::vector<SubRecord> parseSubRecords(
     const std::vector<std::uint8_t>& data,
-    std::size_t headerOffset,
     std::size_t dataOffset,
     std::size_t dataSize)
 {
-    Record record;
-
-    record.type =
-        readType(data, headerOffset);
-
-    record.headerOffset =
-        headerOffset;
-
-    record.dataOffset =
-        dataOffset;
-
     const std::size_t end =
         dataOffset + dataSize;
 
     std::size_t cursor =
         dataOffset;
+
+    std::vector<SubRecord> subRecords;
 
     while (cursor < end)
     {
@@ -212,9 +202,8 @@ Record parseRecord(
             rawSize;
 
         /*
-         * XXXX is an extended-size marker.
-         * It applies to the immediately following
-         * subrecord.
+         * XXXX is an extended-size marker. It applies to the
+         * immediately following subrecord.
          */
         if (subType == "XXXX")
         {
@@ -272,17 +261,42 @@ Record parseRecord(
 
         subRecord.data.assign(
             data.begin() +
-                static_cast<std::ptrdiff_t>(
-                    cursor),
+                static_cast<std::ptrdiff_t>(cursor),
             data.begin() +
                 static_cast<std::ptrdiff_t>(
                     cursor + actualSize));
 
-        record.subRecords.push_back(
+        subRecords.push_back(
             std::move(subRecord));
 
         cursor += actualSize;
     }
+
+    return subRecords;
+}
+
+Record parseRecord(
+    const std::vector<std::uint8_t>& data,
+    std::size_t headerOffset,
+    std::size_t dataOffset,
+    std::size_t dataSize)
+{
+    Record record;
+
+    record.type =
+        readType(data, headerOffset);
+
+    record.headerOffset =
+        headerOffset;
+
+    record.dataOffset =
+        dataOffset;
+
+    record.subRecords =
+        parseSubRecords(
+            data,
+            dataOffset,
+            dataSize);
 
     return record;
 }
@@ -414,23 +428,22 @@ void parseContainer(
                     record.dataOffset,
                     size);
 
-            Record parsed =
-                parseRecord(
+            Record parsed = record;
+
+            parsed.subRecords =
+                parseSubRecords(
                     decompressed,
-                    0,
                     0,
                     decompressed.size());
 
-            parsed.flags = record.flags;
-            parsed.formId = record.formId;
-            parsed.timestamp = record.timestamp;
-            parsed.vcs1 = record.vcs1;
-            parsed.version = record.version;
-            parsed.unknown = record.unknown;
-            parsed.headerOffset = record.headerOffset;
-            parsed.dataOffset = record.dataOffset;
+            /*
+             * Subrecord offsets in a decompressed payload are relative
+             * to that payload. Keep the original record header offset
+             * and original data offset in the Record itself; the
+             * SubRecord offsets are diagnostic offsets into the
+             * decompressed representation.
+             */
             parsed.compressed = true;
-            parsed.payload = std::move(record.payload);
             parsed.parentWorldspaceFormId =
                 parentWorldspaceFormId;
             parsed.parentCellFormId =
