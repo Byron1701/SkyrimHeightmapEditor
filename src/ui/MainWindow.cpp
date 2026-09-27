@@ -2,9 +2,11 @@
 
 #include "plugin/EspReader.h"
 #include "skyrim/LandDecoder.h"
+#include "terrain/HeightField.h"
 
 #include <imgui.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <exception>
 #include <filesystem>
@@ -123,6 +125,7 @@ void MainWindow::drawMenuBar()
             selectedRecord_ = -1;
             selectedWorldspace_ = -1;
             selectedCell_ = -1;
+            terrainCache_.clear();
             status_ = "Plugin closed.";
         }
 
@@ -233,6 +236,7 @@ void MainWindow::openPlugin()
         selectedWorldspace_ = -1;
         selectedCell_ = -1;
         plugin_.rebuildWorldIndex();
+        rebuildTerrainCache();
 
         std::ostringstream stream;
 
@@ -251,6 +255,7 @@ void MainWindow::openPlugin()
         selectedRecord_ = -1;
         selectedWorldspace_ = -1;
         selectedCell_ = -1;
+        terrainCache_.clear();
 
         status_ =
             std::string("Error: ") +
@@ -508,192 +513,243 @@ void MainWindow::drawWorldIndexPanel()
     }
 }
 
+void MainWindow::rebuildTerrainCache()
+{
+    terrainCache_.clear();
+
+    for (const LandIndex& land : plugin_.lands)
+    {
+        if (land.recordIndex >= plugin_.records.size())
+            continue;
+
+        const Record& record =
+            plugin_.records[land.recordIndex];
+
+        const LandDecodeResult decoded =
+            LandDecoder::decode(record);
+
+        if (decoded.valid)
+        {
+            terrainCache_.emplace(
+                land.recordIndex,
+                decoded.heightField);
+        }
+    }
+}
+
 void MainWindow::drawTerrainPanel()
 {
-    ImGui::TextUnformatted("Selected CELL terrain");
+    ImGui::TextUnformatted("Terrain");
 
-    if (selectedCell_ < 0 ||
-        selectedCell_ >= static_cast<int>(plugin_.cells.size()))
+    if (selectedWorldspace_ < 0 ||
+        selectedWorldspace_ >=
+            static_cast<int>(plugin_.worldspaces.size()))
     {
         ImGui::TextUnformatted(
-            "Select a cell with an indexed LAND record.");
+            "Select a worldspace to view its terrain.");
         return;
     }
 
-    const CellIndex& cell =
-        plugin_.cells[static_cast<std::size_t>(selectedCell_)];
-
-    if (cell.landRecordIndex == static_cast<std::size_t>(-1))
-    {
-        ImGui::TextUnformatted(
-            "The selected cell has no indexed LAND record.");
-        return;
-    }
-
-    const Record& land =
-        plugin_.records[cell.landRecordIndex];
-
-    const LandDecodeResult decoded =
-        LandDecoder::decode(land);
-
-    if (!decoded.valid)
-    {
-        ImGui::TextWrapped(
-            "LAND %08X: %s",
-            land.formId,
-            decoded.error.c_str());
-        return;
-    }
-
-    ImGui::Text(
-        "CELL %08X    Grid: %d, %d    LAND: %08X",
-        cell.formId,
-        cell.gridX,
-        cell.gridY,
-        land.formId);
-
-    ImGui::SameLine();
-
-    ImGui::Checkbox(
-        "Wireframe",
-        &terrainWireframe_);
+    const WorldspaceIndex& worldspace =
+        plugin_.worldspaces[
+            static_cast<std::size_t>(
+                selectedWorldspace_)];
 
     if (ImGui::BeginTabBar("TerrainTabs"))
     {
-        if (ImGui::BeginTabItem("3D View"))
+        if (ImGui::BeginTabItem("Worldspace 3D"))
         {
+            std::vector<TerrainWorldCell> cells;
+            cells.reserve(
+                worldspace.landRecordIndices.size());
+
+            for (std::size_t landRecordIndex :
+                 worldspace.landRecordIndices)
+            {
+                const auto cacheIt =
+                    terrainCache_.find(landRecordIndex);
+
+                if (cacheIt == terrainCache_.end())
+                    continue;
+
+                const auto cellIt =
+                    std::find_if(
+                        plugin_.cells.begin(),
+                        plugin_.cells.end(),
+                        [landRecordIndex](const CellIndex& cell)
+                        {
+                            return cell.landRecordIndex ==
+                                landRecordIndex;
+                        });
+
+                if (cellIt == plugin_.cells.end() ||
+                    !cellIt->hasCoordinates)
+                {
+                    continue;
+                }
+
+                cells.push_back({
+                    cellIt->gridX,
+                    cellIt->gridY,
+                    plugin_.records[landRecordIndex].formId,
+                    &cacheIt->second
+                });
+            }
+
             ImGui::Text(
-                "33 x 33 vertices | 32 x 32 quads | 2,048 triangles | "
-                "128 Skyrim units between vertices");
+                "Worldspace: %08X  Cells with terrain: %zu",
+                worldspace.formId,
+                cells.size());
+
+            ImGui::SameLine();
+
+            ImGui::Checkbox(
+                "Wireframe",
+                &terrainWireframe_);
 
             ImGui::BeginChild(
-                "Terrain3DViewportChild",
-                ImVec2(0.0f, 430.0f),
+                "TerrainWorldspaceViewportChild",
+                ImVec2(0.0f, 500.0f),
                 true);
 
-            terrainViewport_.draw(
-                decoded.heightField,
-                terrainWireframe_);
+            if (cells.empty())
+            {
+                ImGui::TextUnformatted(
+                    "No LAND records with XCLC coordinates were found.");
+            }
+            else
+            {
+                terrainViewport_.drawWorldspace(
+                    cells,
+                    terrainWireframe_);
+            }
 
             ImGui::EndChild();
 
             ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("Heightfield"))
+        if (ImGui::BeginTabItem("Selected Cell"))
         {
-            ImGui::Text(
-                "VHGT offset: %.3f",
-                decoded.offset);
-
-            ImGui::Text(
-                "Elevation range: %.3f to %.3f",
-                decoded.heightField.minimum(),
-                decoded.heightField.maximum());
-
-            const float availableWidth =
-                ImGui::GetContentRegionAvail().x;
-
-            const float mapSize =
-                availableWidth > 260.0f
-                    ? (availableWidth < 520.0f
-                        ? availableWidth
-                        : 520.0f)
-                    : 260.0f;
-
-            ImGui::BeginChild(
-                "TerrainHeightmapPreview",
-                ImVec2(mapSize, mapSize + 25.0f),
-                true);
-
-            ImDrawList* drawList =
-                ImGui::GetWindowDrawList();
-
-            const ImVec2 origin =
-                ImGui::GetCursorScreenPos();
-
-            const float cellSize =
-                mapSize /
-                static_cast<float>(
-                    decoded.heightField.width());
-
-            const float minHeight =
-                decoded.heightField.minimum();
-
-            const float maxHeight =
-                decoded.heightField.maximum();
-
-            const float range =
-                maxHeight - minHeight;
-
-            for (std::size_t y = 0;
-                 y < decoded.heightField.height();
-                 ++y)
+            if (selectedCell_ < 0 ||
+                selectedCell_ >=
+                    static_cast<int>(plugin_.cells.size()))
             {
-                for (std::size_t x = 0;
-                     x < decoded.heightField.width();
-                     ++x)
+                ImGui::TextUnformatted(
+                    "Select a cell with an indexed LAND record.");
+            }
+            else
+            {
+                const CellIndex& cell =
+                    plugin_.cells[
+                        static_cast<std::size_t>(
+                            selectedCell_)];
+
+                if (cell.landRecordIndex ==
+                    static_cast<std::size_t>(-1))
                 {
-                    const float height =
-                        decoded.heightField.at(x, y);
+                    ImGui::TextUnformatted(
+                        "The selected cell has no indexed LAND record.");
+                }
+                else
+                {
+                    const auto cacheIt =
+                        terrainCache_.find(
+                            cell.landRecordIndex);
 
-                    const float normalised =
-                        range > 0.0f
-                            ? (height - minHeight) / range
-                            : 0.5f;
+                    if (cacheIt == terrainCache_.end())
+                    {
+                        ImGui::TextUnformatted(
+                            "The LAND record could not be decoded.");
+                    }
+                    else
+                    {
+                        const HeightField& heightField =
+                            cacheIt->second;
 
-                    const int value =
-                        static_cast<int>(
-                            normalised * 255.0f);
+                        const Record& land =
+                            plugin_.records[
+                                cell.landRecordIndex];
 
-                    const ImU32 grey =
-                        IM_COL32(
-                            value,
-                            value,
-                            value,
-                            255);
+                        const LandDecodeResult decoded =
+                            LandDecoder::decode(land);
 
-                    const ImVec2 a(
-                        origin.x +
-                            static_cast<float>(x) *
-                            cellSize,
-                        origin.y +
-                            static_cast<float>(y) *
-                            cellSize);
+                        ImGui::Text(
+                            "CELL %08X    XCLC: %d, %d    LAND: %08X",
+                            cell.formId,
+                            cell.gridX,
+                            cell.gridY,
+                            land.formId);
 
-                    const ImVec2 b(
-                        origin.x +
-                            static_cast<float>(x + 1) *
-                            cellSize,
-                        origin.y +
-                            static_cast<float>(y + 1) *
-                            cellSize);
+                        ImGui::SameLine();
 
-                    drawList->AddRectFilled(
-                        a,
-                        b,
-                        grey);
+                        ImGui::Checkbox(
+                            "Wireframe",
+                            &terrainWireframe_);
+
+                        if (ImGui::BeginTabBar("SelectedTerrainTabs"))
+                        {
+                            if (ImGui::BeginTabItem("3D View"))
+                            {
+                                ImGui::Text(
+                                    "33 x 33 vertices | 32 x 32 quads | "
+                                    "2,048 triangles");
+
+                                ImGui::BeginChild(
+                                    "Terrain3DViewportChild",
+                                    ImVec2(0.0f, 430.0f),
+                                    true);
+
+                                terrainViewport_.draw(
+                                    heightField,
+                                    terrainWireframe_);
+
+                                ImGui::EndChild();
+
+                                ImGui::EndTabItem();
+                            }
+
+                            if (ImGui::BeginTabItem("16-bit Heightfield"))
+                            {
+                                terrainViewport_.drawHeightfield16(
+                                    heightField);
+
+                                ImGui::EndTabItem();
+                            }
+
+                            if (ImGui::BeginTabItem("Diagnostics"))
+                            {
+                                ImGui::Text(
+                                    "VHGT offset: %.3f",
+                                    decoded.offset);
+
+                                ImGui::Text(
+                                    "Elevation range: %.3f to %.3f GU",
+                                    heightField.minimum(),
+                                    heightField.maximum());
+
+                                const std::size_t centre =
+                                    heightField.width() / 2;
+
+                                ImGui::Text(
+                                    "Centre sample: %.3f GU",
+                                    heightField.at(
+                                        centre,
+                                        centre));
+
+                                ImGui::Text(
+                                    "XCLC: %d, %d",
+                                    cell.gridX,
+                                    cell.gridY);
+
+                                ImGui::EndTabItem();
+                            }
+
+                            ImGui::EndTabBar();
+                        }
+                    }
                 }
             }
-
-            ImGui::Dummy(
-                ImVec2(
-                    mapSize,
-                    mapSize));
-
-            ImGui::TextUnformatted(
-                "Top = stored VHGT row 0; left/right = X.");
-
-            ImGui::EndChild();
-
-            const std::size_t centre =
-                decoded.heightField.width() / 2;
-
-            ImGui::Text(
-                "Centre sample: %.3f",
-                decoded.heightField.at(
-                    centre,
-                    centre));
 
             ImGui::EndTabItem();
         }
