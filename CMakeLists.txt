@@ -64,6 +64,8 @@ add_executable(SkyrimHeightmapEditor
     src/skyrim/SubRecord.cpp
     src/skyrim/SubRecord.h
     src/skyrim/SkyrimTypes.h
+    src/skyrim/LandDecoder.cpp
+    src/skyrim/LandDecoder.h
 
     src/terrain/HeightField.cpp
     src/terrain/HeightField.h
