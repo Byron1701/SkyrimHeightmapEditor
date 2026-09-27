@@ -104,8 +104,15 @@ LandDecodeResult LandDecoder::decode(
      *
      * The resulting values are Skyrim world Z coordinates.
      */
-    float rowStart = 0.0f;
-    float previous = 0.0f;
+    /*
+     * The first signed byte is a retained zero/reference value; the
+     * absolute starting height is the VHGT float offset multiplied by
+     * eight. Each subsequent row begins from the previous row's first
+     * vertex, and the remaining vertices in that row accumulate
+     * differences from the vertex immediately to their left.
+     */
+    float rowStart =
+        result.offset * HeightScale;
 
     std::size_t cursor = 4;
 
@@ -118,21 +125,23 @@ LandDecodeResult LandDecoder::decode(
 
             if (x == 0)
             {
-                rowStart +=
-                    static_cast<float>(delta) *
-                    HeightScale;
+                if (y != 0)
+                {
+                    rowStart +=
+                        static_cast<float>(delta) *
+                        HeightScale;
+                }
 
-                previous = rowStart;
+                result.heightField.at(x, y) =
+                    rowStart;
             }
             else
             {
-                previous +=
+                result.heightField.at(x, y) =
+                    result.heightField.at(x - 1, y) +
                     static_cast<float>(delta) *
                     HeightScale;
             }
-
-            result.heightField.at(x, y) =
-                result.offset + previous;
         }
     }
 
