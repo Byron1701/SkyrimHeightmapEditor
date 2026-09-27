@@ -30,8 +30,12 @@ namespace
 {
 constexpr float LandVertexSpacing = 128.0f;
 constexpr float LandCellSize = 4096.0f;
-constexpr float HeightMap16Bias = 32768.0f;
-constexpr float HeightMap16Scale = 1.0f / 8.0f;
+// Skyrim terrain height range used by the native heightmap representation.
+// VHGT heights are quantised in 8-GU terrain-height units, while this 16-bit
+// display maps the supported absolute elevation range onto the full image.
+constexpr float SkyrimHeightMin = -8192.0f;
+constexpr float SkyrimHeightMax = 122878.0f;
+constexpr float HeightMap16Scale = 65535.0f / (SkyrimHeightMax - SkyrimHeightMin);
 
 #ifndef GL_ARRAY_BUFFER
 #define GL_ARRAY_BUFFER 0x8892
@@ -302,7 +306,7 @@ Vec3 rotate(const Vec3& p, float yaw, float pitch)
 
 std::uint16_t encodeAbsoluteHeight16(float height)
 {
-    const float value = std::round(height * HeightMap16Scale + HeightMap16Bias);
+    const float value = std::round((height - SkyrimHeightMin) * HeightMap16Scale);
     if (value <= 0) return 0;
     if (value >= 65535) return 65535;
     return static_cast<std::uint16_t>(value);
@@ -717,7 +721,7 @@ void TerrainViewport::drawHeightfield16(const HeightField& heightField)
 
     ImGui::TextUnformatted("16-bit absolute grayscale");
     ImGui::TextUnformatted(
-        "Black = -262144 GU; white = 262136 GU; one 16-bit step = 8 GU.");
+        "Black = -8192 GU; white = 122878 GU; fixed to Skyrim's supported terrain elevation range.");
 
     const std::size_t width=heightField.width(), height=heightField.height();
     std::vector<std::uint16_t> pixels(width*height);
