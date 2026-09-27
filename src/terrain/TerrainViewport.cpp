@@ -320,7 +320,7 @@ void TerrainViewport::draw(
                 distance,
                 centre,
                 scale,
-                pan);
+                ImVec2(panX, panY));
 
         const ImVec2 c =
             project(
