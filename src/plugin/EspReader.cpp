@@ -217,7 +217,9 @@ void parseContainer(
     const std::vector<std::uint8_t>& data,
     std::size_t offset,
     std::size_t end,
-    std::vector<Record>& records)
+    std::vector<Record>& records,
+    std::uint32_t parentWorldspaceFormId = 0,
+    std::uint32_t parentCellFormId = 0)
 {
     while (offset < end)
     {
@@ -233,13 +235,14 @@ void parseContainer(
         const std::uint32_t size =
             readU32(data, offset + 4);
 
-        /*
-         * GRUP is a container rather than a normal TES record.
-         * Its size field is the total size of the GRUP, including
-         * its 24-byte header. Child records therefore begin at +24.
-         */
         if (type == "GRUP")
         {
+            if (size < RecordHeaderSize)
+            {
+                throw std::runtime_error(
+                    "Malformed GRUP with size smaller than its header.");
+            }
+
             const std::size_t groupEnd =
                 offset + static_cast<std::size_t>(size);
 
@@ -249,11 +252,52 @@ void parseContainer(
                 end,
                 "GRUP");
 
+            /*
+             * GRUP header:
+             *   +00 signature
+             *   +04 size
+             *   +08 group label
+             *   +0C group type
+             *   +10 timestamp
+             *   +12 unknown
+             *   +14 version
+             *   +16 unknown
+             *
+             * For the terrain hierarchy we care about:
+             *   type 1 = worldspace children; label is WRLD FormID.
+             *   type 6 = cell children; label is CELL FormID.
+             *
+             * Other group types inherit the enclosing context.
+             */
+            const std::uint32_t groupLabel =
+                readU32(data, offset + 8);
+
+            const std::uint32_t groupType =
+                readU32(data, offset + 12);
+
+            std::uint32_t childWorldspace =
+                parentWorldspaceFormId;
+
+            std::uint32_t childCell =
+                parentCellFormId;
+
+            if (groupType == 1)
+            {
+                childWorldspace = groupLabel;
+                childCell = 0;
+            }
+            else if (groupType == 6)
+            {
+                childCell = groupLabel;
+            }
+
             parseContainer(
                 data,
                 offset + RecordHeaderSize,
                 groupEnd,
-                records);
+                records,
+                childWorldspace,
+                childCell);
 
             offset = groupEnd;
             continue;
@@ -277,12 +321,18 @@ void parseContainer(
         record.headerOffset = offset;
         record.dataOffset = offset + RecordHeaderSize;
         record.compressed = (record.flags & CompressedFlag) != 0;
+        record.parentWorldspaceFormId = parentWorldspaceFormId;
+        record.parentCellFormId = parentCellFormId;
 
         if (record.compressed)
         {
             record.payload.assign(
-                data.begin() + static_cast<std::ptrdiff_t>(record.dataOffset),
-                data.begin() + static_cast<std::ptrdiff_t>(record.dataOffset + size));
+                data.begin() +
+                    static_cast<std::ptrdiff_t>(
+                        record.dataOffset),
+                data.begin() +
+                    static_cast<std::ptrdiff_t>(
+                        record.dataOffset + size));
         }
         else
         {
@@ -300,6 +350,10 @@ void parseContainer(
             parsed.version = record.version;
             parsed.unknown = record.unknown;
             parsed.compressed = false;
+            parsed.parentWorldspaceFormId =
+                parentWorldspaceFormId;
+            parsed.parentCellFormId =
+                parentCellFormId;
             record = std::move(parsed);
         }
 
@@ -309,7 +363,6 @@ void parseContainer(
             RecordHeaderSize +
             static_cast<std::size_t>(size);
     }
-}
 }
 
 Plugin EspReader::read(
