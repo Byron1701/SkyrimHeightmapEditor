@@ -54,14 +54,6 @@ LandDecodeResult LandDecoder::decode(
         return result;
     }
 
-    if (record.compressed)
-    {
-        result.error =
-            "LAND record is compressed; VHGT is not "
-            "available until record decompression is implemented.";
-        return result;
-    }
-
     const SubRecord* vhgt =
         findSubRecord(record, "VHGT");
 
