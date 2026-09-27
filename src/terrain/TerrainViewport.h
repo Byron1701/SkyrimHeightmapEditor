@@ -37,6 +37,7 @@ public:
 
 private:
     std::uint32_t heightmapTexture_ = 0;
+    std::uint32_t heightmapPreviewTexture_ = 0;
 
     std::uint32_t terrainProgram_ = 0;
     std::uint32_t terrainVao_ = 0;
