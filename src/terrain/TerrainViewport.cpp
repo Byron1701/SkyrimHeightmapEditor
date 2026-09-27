@@ -663,16 +663,38 @@ void TerrainViewport::drawWorldspace(
     const int width=std::max(300,static_cast<int>(available.x));
     const int height=std::max(300,static_cast<int>(std::min(500.0f,available.y)));
 
+    const ImVec2 viewportMin = ImGui::GetCursorScreenPos();
     ImGui::InvisibleButton("TerrainOpenGLViewport",
         ImVec2(static_cast<float>(width),static_cast<float>(height)),
         ImGuiButtonFlags_MouseButtonLeft|ImGuiButtonFlags_MouseButtonRight);
 
-    handleViewportInput(yaw,pitch,distance,panX,panY);
+    const bool hovered = ImGui::IsItemHovered();
+    if (hovered)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+        {
+            yaw += io.MouseDelta.x * 0.012f;
+            pitch += io.MouseDelta.y * 0.012f;
+            pitch = std::clamp(pitch, -1.570795f, 1.570795f);
+        }
+        if (ImGui::IsMouseDragging(ImGuiMouseButton_Right))
+        {
+            panX += io.MouseDelta.x;
+            panY += io.MouseDelta.y;
+        }
+        if (std::abs(io.MouseWheel) > 0.0f)
+        {
+            distance *= std::pow(0.85f, io.MouseWheel);
+            distance = std::clamp(distance, 1000.0f, 100000.0f);
+        }
+    }
 
     renderTerrainGpu(cells,wireframe,width,height);
 
     if(terrainColorTexture_!=0)
     {
+        ImGui::SetCursorScreenPos(viewportMin);
         ImGui::Image(
             static_cast<ImTextureID>(
                 static_cast<std::uintptr_t>(terrainColorTexture_)),
