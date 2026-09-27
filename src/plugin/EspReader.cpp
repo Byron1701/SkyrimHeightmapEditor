@@ -1,5 +1,7 @@
 #include "plugin/EspReader.h"
 
+#include <zlib.h>
+
 #include <fstream>
 #include <iterator>
 #include <sstream>
@@ -74,6 +76,78 @@ std::uint32_t readU32(
             data[offset + 2]) << 16) |
         (static_cast<std::uint32_t>(
             data[offset + 3]) << 24);
+}
+
+std::vector<std::uint8_t> decompressRecord(
+    const std::vector<std::uint8_t>& data,
+    std::size_t offset,
+    std::size_t size)
+{
+    /*
+     * Skyrim compressed record data is:
+     *
+     *   uint32 uncompressed size
+     *   zlib stream
+     *
+     * The record header's data-size includes both fields.
+     */
+    if (size < 4)
+    {
+        throw std::runtime_error(
+            "Compressed record is too small to contain its uncompressed size.");
+    }
+
+    const std::uint32_t expectedSize =
+        readU32(data, offset);
+
+    if (expectedSize == 0)
+    {
+        return {};
+    }
+
+    requireRange(
+        offset + 4,
+        size - 4,
+        data.size(),
+        "compressed record payload");
+
+    std::vector<std::uint8_t> output(
+        static_cast<std::size_t>(expectedSize));
+
+    uLongf outputSize =
+        static_cast<uLongf>(output.size());
+
+    const Bytef* compressedData =
+        reinterpret_cast<const Bytef*>(
+            data.data() + offset + 4);
+
+    const uLong compressedSize =
+        static_cast<uLong>(size - 4);
+
+    const int result =
+        ::uncompress(
+            reinterpret_cast<Bytef*>(output.data()),
+            &outputSize,
+            compressedData,
+            compressedSize);
+
+    if (result != Z_OK)
+    {
+        std::ostringstream stream;
+
+        stream << "Could not decompress record payload (zlib error "
+               << result << ").";
+
+        throw std::runtime_error(stream.str());
+    }
+
+    if (outputSize != output.size())
+    {
+        throw std::runtime_error(
+            "Compressed record decompressed to an unexpected size.");
+    }
+
+    return output;
 }
 
 std::string readType(
@@ -333,6 +407,35 @@ void parseContainer(
                 data.begin() +
                     static_cast<std::ptrdiff_t>(
                         record.dataOffset + size));
+
+            const std::vector<std::uint8_t> decompressed =
+                decompressRecord(
+                    data,
+                    record.dataOffset,
+                    size);
+
+            Record parsed =
+                parseRecord(
+                    decompressed,
+                    0,
+                    0,
+                    decompressed.size());
+
+            parsed.flags = record.flags;
+            parsed.formId = record.formId;
+            parsed.timestamp = record.timestamp;
+            parsed.vcs1 = record.vcs1;
+            parsed.version = record.version;
+            parsed.unknown = record.unknown;
+            parsed.headerOffset = record.headerOffset;
+            parsed.dataOffset = record.dataOffset;
+            parsed.compressed = true;
+            parsed.payload = std::move(record.payload);
+            parsed.parentWorldspaceFormId =
+                parentWorldspaceFormId;
+            parsed.parentCellFormId =
+                parentCellFormId;
+            record = std::move(parsed);
         }
         else
         {
