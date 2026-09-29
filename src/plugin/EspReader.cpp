@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <utility>
@@ -307,7 +308,11 @@ void parseContainer(
     std::size_t end,
     std::vector<Record>& records,
     std::uint32_t parentWorldspaceFormId = 0,
-    std::uint32_t parentCellFormId = 0)
+    std::uint32_t parentCellFormId = 0,
+    std::int32_t containingGroupType = -1,
+    std::uint32_t containingGroupLabel = 0,
+    std::size_t containingGroupHeaderOffset = std::numeric_limits<std::size_t>::max(),
+    std::size_t containingGroupEndOffset = std::numeric_limits<std::size_t>::max())
 {
     while (offset < end)
     {
@@ -385,7 +390,11 @@ void parseContainer(
                 groupEnd,
                 records,
                 childWorldspace,
-                childCell);
+                childCell,
+                static_cast<std::int32_t>(groupType),
+                groupLabel,
+                offset,
+                groupEnd);
 
             offset = groupEnd;
             continue;
@@ -408,9 +417,15 @@ void parseContainer(
         record.unknown = readU16(data, offset + 22);
         record.headerOffset = offset;
         record.dataOffset = offset + RecordHeaderSize;
+        record.dataSize = size;
+        record.endOffset = record.dataOffset + size;
         record.compressed = (record.flags & CompressedFlag) != 0;
         record.parentWorldspaceFormId = parentWorldspaceFormId;
         record.parentCellFormId = parentCellFormId;
+        record.groupType = containingGroupType;
+        record.groupLabel = containingGroupLabel;
+        record.groupHeaderOffset = containingGroupHeaderOffset;
+        record.groupEndOffset = containingGroupEndOffset;
 
         if (record.compressed)
         {
