@@ -292,6 +292,10 @@ Record parseRecord(
 
     record.dataOffset =
         dataOffset;
+    record.dataSize =
+        dataSize;
+    record.endOffset =
+        dataOffset + dataSize;
 
     record.subRecords =
         parseSubRecords(
@@ -463,6 +467,10 @@ void parseContainer(
                 parentWorldspaceFormId;
             parsed.parentCellFormId =
                 parentCellFormId;
+            parsed.groupType = containingGroupType;
+            parsed.groupLabel = containingGroupLabel;
+            parsed.groupHeaderOffset = containingGroupHeaderOffset;
+            parsed.groupEndOffset = containingGroupEndOffset;
             record = std::move(parsed);
         }
         else
